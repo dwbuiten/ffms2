@@ -661,7 +661,7 @@ int FFMS_VideoSource::Seek(int n) {
 
 int FFMS_VideoSource::ReadFrame(AVPacket *pkt) {
     int ret = av_read_frame(FormatContext, pkt);
-    if (ret >= 0 || ret == AVERROR(EOF)) return ret;
+    if (ret >= 0 || ret == AVERROR_EOF) return ret;
 
     // Lavf reports the beginning of the actual video data as the packet's
     // position, but the reader requires the header, so we end up seeking
@@ -697,7 +697,8 @@ void FFMS_VideoSource::DecodeNextFrame(int64_t &AStartTime, int64_t &Pos) {
         throw FFMS_Exception(FFMS_ERROR_DECODING, FFMS_ERROR_ALLOCATION_FAILED,
             "Could not allocate packet.");
 
-    while (ReadFrame(Packet) >= 0) {
+    int ret;
+    while ((ret = ReadFrame(Packet)) >= 0) {
         if (Packet->stream_index != VideoTrack) {
             av_packet_unref(Packet);
             continue;
@@ -715,6 +716,13 @@ void FFMS_VideoSource::DecodeNextFrame(int64_t &AStartTime, int64_t &Pos) {
             av_packet_free(&Packet);
             return;
         }
+    }
+    if (ret == AVERROR_INVALIDDATA) {
+        char err[1024];
+        av_strerror(ret, err, 1024);
+        std::string serr(err); // man, c++...
+        throw FFMS_Exception(FFMS_ERROR_SCALING, FFMS_ERROR_INVALID_ARGUMENT,
+            "Failed to read packet: " + serr);
     }
 
     // Flush final frames

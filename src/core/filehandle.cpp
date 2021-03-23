@@ -36,7 +36,13 @@ static AVIOContext *ffms_fopen(const char *filename, const char *mode) {
         flags |= AVIO_FLAG_WRITE;
 
     AVIOContext *ctx;
-    int ret = avio_open2(&ctx, filename, flags, nullptr, nullptr);
+    AVDictionary *opts = nullptr;
+
+    if (av_dict_set(&opts, "rw_timeout", "120000000", 0) < 0) {
+        throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
+            std::string("Couldn't set rw_timeout AVOption"));
+    }
+    int ret = avio_open2(&ctx, filename, flags, nullptr, &opts);
     if (ret < 0)
         return nullptr;
     return ctx;
@@ -58,9 +64,12 @@ FileHandle::~FileHandle() {
 
 void FileHandle::Seek(int64_t offset, int origin) {
     int64_t ret = avio_seek(avio, offset, origin);
-    if (ret < 0)
+    if (ret < 0) {
+        char err[1024] = { 0 };
+        av_strerror(ret, err, 1024);
         throw FFMS_Exception(error_source, error_cause,
-            "Failed to seek in '" + filename + "'");
+            "Failed to seek in '" + filename + "': " + err);
+    }
 }
 
 int64_t FileHandle::Tell() {
