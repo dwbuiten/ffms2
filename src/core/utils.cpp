@@ -92,6 +92,10 @@ void LAVFOpenFile(const char *SourceFile, AVFormatContext *&FormatContext, int T
         throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
             std::string("Couldn't set use_mfra_for AVOption"));
     }
+    if (av_dict_set(&opts, "rw_timeout", "120000000", 0) < 0) {
+        throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
+            std::string("Couldn't set rw_timeout AVOption"));
+    }
     if (avformat_open_input(&FormatContext, SourceFile, nullptr, &opts) != 0)
         throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_FILE_READ,
             std::string("Couldn't open '") + SourceFile + "'");

@@ -241,10 +241,13 @@ FFMS_Indexer::FFMS_Indexer(const char *Filename)
             throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
                 std::string("Couldn't set use_mfra_for AVOption"));
         }
+        if (av_dict_set(&opts, "rw_timeout", "120000000", 0) < 0) {
+            throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
+                std::string("Couldn't set rw_timeout AVOption"));
+        }
         if (avformat_open_input(&FormatContext, Filename, nullptr, &opts) != 0)
             throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_FILE_READ,
                 std::string("Can't open '") + Filename + "'");
-
         FFMS_Index::CalculateFileSignature(Filename, &Filesize, Digest);
 
         if (avformat_find_stream_info(FormatContext, nullptr) < 0) {
@@ -470,7 +473,8 @@ FFMS_Index *FFMS_Indexer::DoIndexing() {
 
     int64_t filesize = avio_size(FormatContext->pb);
     enum AVPictureStructure LastPicStruct = AV_PICTURE_STRUCTURE_UNKNOWN;
-    while (av_read_frame(FormatContext, &Packet) >= 0) {
+    int ret;
+    while ((ret = av_read_frame(FormatContext, &Packet)) >= 0) {
         // Update progress
         // FormatContext->pb can apparently be NULL when opening images.
         if (IC && FormatContext->pb) {
@@ -539,6 +543,10 @@ FFMS_Index *FFMS_Indexer::DoIndexing() {
             TrackInfo.LastDuration = Packet.duration;
 
         av_packet_unref(&Packet);
+    }
+    if (ret == AVERROR_INVALIDDATA) {
+         throw FFMS_Exception(FFMS_ERROR_INDEXING, FFMS_ERROR_PARSER,
+            "Indexing failed: Invalid data.");
     }
 
     TrackIndices->Finalize(AVContexts, FormatContext->iformat->name);
