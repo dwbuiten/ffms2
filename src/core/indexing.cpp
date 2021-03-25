@@ -544,9 +544,9 @@ FFMS_Index *FFMS_Indexer::DoIndexing() {
 
         av_packet_unref(&Packet);
     }
-    if (ret == AVERROR_INVALIDDATA) {
+    if (ret == AVERROR(ETIMEDOUT)) {
          throw FFMS_Exception(FFMS_ERROR_INDEXING, FFMS_ERROR_PARSER,
-            "Indexing failed: Invalid data.");
+            "Indexing failed: Connection timed out.");
     }
 
     TrackIndices->Finalize(AVContexts, FormatContext->iformat->name);
