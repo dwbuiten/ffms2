@@ -717,7 +717,7 @@ void FFMS_VideoSource::DecodeNextFrame(int64_t &AStartTime, int64_t &Pos) {
             return;
         }
     }
-    if (ret == AVERROR_INVALIDDATA) {
+    if (ret == AVERROR(ETIMEDOUT)) {
         char err[1024];
         av_strerror(ret, err, 1024);
         std::string serr(err); // man, c++...
