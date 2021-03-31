@@ -25,6 +25,7 @@
 #include "zipfile.h"
 
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <numeric>
 #include <sstream>
@@ -557,6 +558,8 @@ FFMS_Index *FFMS_Indexer::DoIndexing() {
         std::string cerr(error);
         throw FFMS_Exception(FFMS_ERROR_INDEXING, FFMS_ERROR_PARSER,
             "Indexing failed: " + cerr);
+    } else if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
+        std::cout << "Got Error: " << ret << std::endl;
     }
 
     TrackIndices->Finalize(AVContexts, FormatContext->iformat->name);
