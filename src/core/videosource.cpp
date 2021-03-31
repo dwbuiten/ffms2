@@ -22,6 +22,7 @@
 #include "indexing.h"
 #include "videoutils.h"
 #include <algorithm>
+#include <iostream>
 #include <thread>
 
 
@@ -719,6 +720,8 @@ void FFMS_VideoSource::DecodeNextFrame(int64_t &AStartTime, int64_t &Pos) {
         std::string serr(err); // man, c++...
         throw FFMS_Exception(FFMS_ERROR_SCALING, FFMS_ERROR_INVALID_ARGUMENT,
             "Failed to read packet: " + serr);
+    } else if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
+        std::cout << "Got Error: " << ret << std::endl;
     }
 
     // Flush final frames
