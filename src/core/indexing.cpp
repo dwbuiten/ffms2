@@ -544,9 +544,12 @@ FFMS_Index *FFMS_Indexer::DoIndexing() {
 
         av_packet_unref(&Packet);
     }
-    if (ret == AVERROR(ETIMEDOUT)) {
-         throw FFMS_Exception(FFMS_ERROR_INDEXING, FFMS_ERROR_PARSER,
-            "Indexing failed: Connection timed out.");
+    if (IsNetworkError(ret)) {
+        char error[1024];
+        av_strerror(ret, error, 1024);
+        std::string cerr(error);
+        throw FFMS_Exception(FFMS_ERROR_INDEXING, FFMS_ERROR_PARSER,
+            "Indexing failed: " + cerr);
     }
 
     TrackIndices->Finalize(AVContexts, FormatContext->iformat->name);

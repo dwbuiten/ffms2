@@ -713,7 +713,7 @@ void FFMS_VideoSource::DecodeNextFrame(int64_t &AStartTime, int64_t &Pos) {
         if (FrameFinished)
             return;
     }
-    if (ret == AVERROR(ETIMEDOUT)) {
+    if (IsNetworkError(ret)) {
         char err[1024];
         av_strerror(ret, err, 1024);
         std::string serr(err); // man, c++...
