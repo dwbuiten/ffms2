@@ -279,7 +279,7 @@ int main(int argc, const char *argv[]) {
 
         ParseCMDLine(argc, argv);
     } catch (Error const& e) {
-        std::cout << e.msg << std::endl;
+        std::cout << e.msg << std::endl << std::flush;
         return 1;
     }
 
@@ -296,7 +296,7 @@ int main(int argc, const char *argv[]) {
     try {
         DoIndexing();
     } catch (Error const& e) {
-        std::cout << e.msg << std::endl;
+        std::cout << e.msg << std::endl << std::flush;
         FFMS_Deinit();
         return 1;
     }
