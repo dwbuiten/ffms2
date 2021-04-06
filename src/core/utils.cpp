@@ -153,6 +153,7 @@ bool IsSamePath(const char *p1, const char *p2) {
 
 bool IsNetworkError(int error) {
     switch (error) {
+    case AVERROR(EIO):
     case AVERROR(ETIMEDOUT):
     case AVERROR(EPROTO):
     case AVERROR(EADDRINUSE):
