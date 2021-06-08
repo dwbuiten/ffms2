@@ -38,10 +38,9 @@ static AVIOContext *ffms_fopen(const char *filename, const char *mode) {
     AVIOContext *ctx;
     AVDictionary *opts = nullptr;
 
-    if (av_dict_set(&opts, "rw_timeout", "120000000", 0) < 0) {
-        throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
-            std::string("Couldn't set rw_timeout AVOption"));
-    }
+    if (IsHTTPURL(filename))
+        SetNetworkAVOptions(&opts);
+
     int ret = avio_open2(&ctx, filename, flags, nullptr, &opts);
     if (ret < 0)
         return nullptr;

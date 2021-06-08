@@ -59,7 +59,8 @@ std::unique_ptr<T> make_unique(Args&&... args) {
 
 void ClearErrorInfo(FFMS_ErrorInfo *ErrorInfo);
 void FillAP(FFMS_AudioProperties &AP, AVCodecContext *CTX, FFMS_Track &Frames);
-
+bool IsHTTPURL(const char *path);
+void SetNetworkAVOptions(AVDictionary **opts);
 void LAVFOpenFile(const char *SourceFile, AVFormatContext *&FormatContext, int Track);
 
 namespace optdetail {

@@ -79,6 +79,37 @@ void FillAP(FFMS_AudioProperties &AP, AVCodecContext *CTX, FFMS_Track &Frames) {
         AP.ChannelLayout = av_get_default_channel_layout(AP.Channels);
 }
 
+bool IsHTTPURL(const char *path) {
+    return (strncmp("https://", path, 8) == 0) || (strncmp("http://", path, 7) == 0);
+}
+
+void SetNetworkAVOptions(AVDictionary **opts) {
+    if (av_dict_set(opts, "rw_timeout", "120000000", 0) < 0) {
+        throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
+            std::string("Couldn't set rw_timeout AVOption"));
+    }
+    if (av_dict_set(opts, "seekable", "1", 0) < 0) {
+        throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
+            std::string("Couldn't set seekable AVOption"));
+    }
+    if (av_dict_set(opts, "multiple_requests", "1", 0) < 0) {
+        throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
+            std::string("Couldn't set multiple_requests AVOption"));
+    }
+    if (av_dict_set(opts, "reconnect", "1", 0) < 0) {
+        throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
+            std::string("Couldn't set reconnect AVOption"));
+    }
+    if (av_dict_set(opts, "reconnect_on_network_error", "1", 0) < 0) {
+        throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
+            std::string("Couldn't set reconnect_on_network_error AVOption"));
+    }
+    if (av_dict_set(opts, "reconnect_on_http_error", "5xx", 0) < 0) {
+        throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
+            std::string("Couldn't set reconnect_on_http_error AVOption"));
+    }
+}
+
 void LAVFOpenFile(const char *SourceFile, AVFormatContext *&FormatContext, int Track) {
     AVDictionary *opts = nullptr;
 
@@ -86,10 +117,10 @@ void LAVFOpenFile(const char *SourceFile, AVFormatContext *&FormatContext, int T
         throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
             std::string("Couldn't set use_mfra_for AVOption"));
     }
-    if (av_dict_set(&opts, "rw_timeout", "120000000", 0) < 0) {
-        throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
-            std::string("Couldn't set rw_timeout AVOption"));
-    }
+
+    if (IsHTTPURL(SourceFile))
+        SetNetworkAVOptions(&opts);
+
     if (avformat_open_input(&FormatContext, SourceFile, nullptr, &opts) != 0)
         throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_FILE_READ,
             std::string("Couldn't open '") + SourceFile + "'");

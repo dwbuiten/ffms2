@@ -242,10 +242,10 @@ FFMS_Indexer::FFMS_Indexer(const char *Filename)
             throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
                 std::string("Couldn't set use_mfra_for AVOption"));
         }
-        if (av_dict_set(&opts, "rw_timeout", "120000000", 0) < 0) {
-            throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_ALLOCATION_FAILED,
-                std::string("Couldn't set rw_timeout AVOption"));
-        }
+
+        if (IsHTTPURL(Filename))
+            SetNetworkAVOptions(&opts);
+
         if (avformat_open_input(&FormatContext, Filename, nullptr, &opts) != 0)
             throw FFMS_Exception(FFMS_ERROR_PARSER, FFMS_ERROR_FILE_READ,
                 std::string("Can't open '") + Filename + "'");
