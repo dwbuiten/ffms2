@@ -332,6 +332,9 @@ typedef struct FFMS_Frame {
     int HasContentLightLevel; /* Non-zero if the 2 fields below are valid */
     unsigned int ContentLightLevelMax;
     unsigned int ContentLightLevelAverage;
+    /* Introduced in FFMS_VERSION <placeholder> */
+    uint8_t *DolbyVisionRPU;
+    int DolbyVisionRPUSize;
 } FFMS_Frame;
 
 typedef struct FFMS_TrackTimeBase {
