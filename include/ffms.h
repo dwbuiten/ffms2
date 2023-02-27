@@ -335,6 +335,9 @@ typedef struct FFMS_Frame {
     /* Introduced in FFMS_VERSION <placeholder> */
     uint8_t *DolbyVisionRPU;
     int DolbyVisionRPUSize;
+    /* Introduced in FFMS_VERSION ((3 << 24) | (1 << 16) | (1 << 8) | 0) */
+    uint8_t *HDR10Plus;
+    int HDR10PlusSize;
 } FFMS_Frame;
 
 typedef struct FFMS_TrackTimeBase {
