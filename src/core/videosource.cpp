@@ -97,6 +97,13 @@ FFMS_Frame *FFMS_VideoSource::OutputFrame(AVFrame *Frame) {
         }
     }
 
+    if (IsMVHEVC) {
+        for (int i = 0; i < 4; i++) {
+            LocalFrame.LeftEyeData[i] = LeftEyeFrameData[i];
+            LocalFrame.LeftEyeLinesize[i] = LeftEyeLinesize[i];
+        }
+    }
+
     LocalFrame.EncodedWidth = Frame->width;
     LocalFrame.EncodedHeight = Frame->height;
     LocalFrame.EncodedPixelFormat = Frame->format;
@@ -258,9 +265,26 @@ FFMS_VideoSource::FFMS_VideoSource(const char *SourceFile, FFMS_Index &Index, in
         if (CodecContext->codec_id == AV_CODEC_ID_H264 && CodecContext->has_b_frames)
             CodecContext->has_b_frames = 15; // the maximum possible value for h264
 
-        if (avcodec_open2(CodecContext, Codec, nullptr) < 0)
+        // THIS IS A HUGE HACK
+        //
+        // Until Anton finishes the MV-HEVC API, we assume any video with Apple metadata is MV-HEVC. RIP.
+        for (int i = 0; i < FormatContext->streams[VideoTrack]->codecpar->nb_coded_side_data; i++) {
+            if (FormatContext->streams[VideoTrack]->codecpar->coded_side_data[i].type == AV_PKT_DATA_STEREO3D) {
+                const AVStereo3D *StereoSideData = (const AVStereo3D *)FormatContext->streams[VideoTrack]->codecpar->coded_side_data[i].data;
+                if (StereoSideData->baseline != 0)
+                    IsMVHEVC = true;
+            }
+        }
+
+        AVDictionary *CodecDict = nullptr;
+        if (IsMVHEVC)
+            av_dict_set(&CodecDict, "output_layer_set", "1", 0);
+
+        if (avcodec_open2(CodecContext, Codec, &CodecDict) < 0)
             throw FFMS_Exception(FFMS_ERROR_DECODING, FFMS_ERROR_CODEC,
                 "Could not open video codec");
+
+        av_dict_free(&CodecDict);
 
         // Similar yet different to h264 workaround above
         // vc1 simply sets has_b_frames to 1 no matter how many there are so instead we set it to the max value
@@ -687,6 +711,25 @@ bool FFMS_VideoSource::DecodePacket(AVPacket *Packet) {
 
     Ret = avcodec_receive_frame(CodecContext, DecodeFrame);
     if (Ret == 0) {
+        if (IsMVHEVC) {
+            const AVFrameSideData *sd = av_frame_get_side_data(DecodeFrame, AV_FRAME_DATA_VIEW_ID);
+            if (!sd)
+                throw FFMS_Exception(FFMS_ERROR_DECODING, FFMS_ERROR_CODEC,
+                    "Missing View ID for MV-HEVC decode.");
+            int view_id = *(int *)sd->data;
+            if (view_id != 0)
+                throw FFMS_Exception(FFMS_ERROR_DECODING, FFMS_ERROR_CODEC,
+                    "View ID desync in MV-HEVC decode");
+            av_freep(&LeftEyeFrameData[0]);
+            if (av_image_alloc(LeftEyeFrameData, LeftEyeLinesize, DecodeFrame->width, DecodeFrame->height, (enum AVPixelFormat) DecodeFrame->format, 16) < 0)
+                throw FFMS_Exception(FFMS_ERROR_DECODING, FFMS_ERROR_ALLOCATION_FAILED,
+                    "Could not allocate second eye buffer");
+            av_image_copy(LeftEyeFrameData, LeftEyeLinesize, DecodeFrame->data, DecodeFrame->linesize, (enum AVPixelFormat) DecodeFrame->format, DecodeFrame->width, DecodeFrame->height);
+            Ret = avcodec_receive_frame(CodecContext, DecodeFrame);
+            if (Ret != 0)
+                throw FFMS_Exception(FFMS_ERROR_DECODING, FFMS_ERROR_CODEC,
+                    "Missing second view for MV-HEVC decode.");
+        }
         Delay.Decrement();
     } else {
         std::swap(DecodeFrame, LastDecodedFrame);
@@ -735,6 +778,7 @@ void FFMS_VideoSource::Free() {
     if (SWS)
         sws_freeContext(SWS);
     av_freep(&SWSFrameData[0]);
+    av_freep(&LeftEyeFrameData[0]);
     av_frame_free(&DecodeFrame);
     av_frame_free(&LastDecodedFrame);
     av_packet_free(&StashedPacket);

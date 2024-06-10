@@ -344,6 +344,10 @@ typedef struct FFMS_Frame {
     /* Introduced in FFMS_VERSION ((3 << 24) | (1 << 16) | (1 << 8) | 0) */
     uint8_t *HDR10Plus;
     int HDR10PlusSize;
+
+    /* If uint8_t *LeftEyeData[4] isn't NULL, then the main buffer is the right eye. */
+    const uint8_t *LeftEyeData[4];
+    int LeftEyeLinesize[4];
 } FFMS_Frame;
 
 typedef struct FFMS_TrackTimeBase {
