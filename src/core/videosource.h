@@ -92,6 +92,10 @@ private:
 
     uint8_t *SWSFrameData[4] = {};
     int SWSFrameLinesize[4] = {};
+    bool EyesInverted = false;
+    bool PrimaryEyeIsLeft = true;
+    uint8_t *LeftEyeFrameData[4] = {};
+    int LeftEyeLinesize[4] = {};
 
     AVPacket *StashedPacket = nullptr;
     bool ResendPacket = false;
@@ -118,6 +122,7 @@ private:
     int SeekMode;
     bool SeekByPos = false;
     bool HaveSeenInterlacedFrame = false;
+    bool IsLayered = false;
 
     void ReAdjustOutputFormat(AVFrame *Frame);
     FFMS_Frame *OutputFrame(AVFrame *Frame);
